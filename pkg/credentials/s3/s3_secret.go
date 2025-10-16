@@ -30,8 +30,10 @@ Boto: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuratio
 const (
 	AWSAccessKeyId         = "AWS_ACCESS_KEY_ID"
 	AWSSecretAccessKey     = "AWS_SECRET_ACCESS_KEY" // #nosec G101
+	AWSSessionToken        = "AWS_SESSION_TOKEN"     // #nosec G101
 	AWSAccessKeyIdName     = "awsAccessKeyID"
 	AWSSecretAccessKeyName = "awsSecretAccessKey"
+	AWSSessionTokenName    = "awsSessionToken"
 	AWSEndpointUrl         = "AWS_ENDPOINT_URL"
 	AWSRegion              = "AWS_DEFAULT_REGION"
 	S3Endpoint             = "S3_ENDPOINT"
@@ -47,6 +49,7 @@ const (
 type S3Config struct {
 	S3AccessKeyIDName        string `json:"s3AccessKeyIDName,omitempty"`
 	S3SecretAccessKeyName    string `json:"s3SecretAccessKeyName,omitempty"`
+	S3SessionTokenName       string `json:"s3SessionTokenName,omitempty"`
 	S3Endpoint               string `json:"s3Endpoint,omitempty"`
 	S3UseHttps               string `json:"s3UseHttps,omitempty"`
 	S3Region                 string `json:"s3Region,omitempty"`
@@ -73,6 +76,8 @@ var (
 func BuildSecretEnvs(secret *corev1.Secret, s3Config *S3Config) []corev1.EnvVar {
 	s3SecretAccessKeyName := AWSSecretAccessKeyName
 	s3AccessKeyIdName := AWSAccessKeyIdName
+	s3SessionTokenName := AWSSessionTokenName
+
 	if s3Config.S3AccessKeyIDName != "" {
 		s3AccessKeyIdName = s3Config.S3AccessKeyIDName
 	}
@@ -80,6 +85,11 @@ func BuildSecretEnvs(secret *corev1.Secret, s3Config *S3Config) []corev1.EnvVar 
 	if s3Config.S3SecretAccessKeyName != "" {
 		s3SecretAccessKeyName = s3Config.S3SecretAccessKeyName
 	}
+
+	if s3Config.S3SessionTokenName != "" {
+		s3SessionTokenName = s3Config.S3SessionTokenName
+	}
+
 	envs := []corev1.EnvVar{
 		{
 			Name: AWSAccessKeyId,
@@ -103,6 +113,21 @@ func BuildSecretEnvs(secret *corev1.Secret, s3Config *S3Config) []corev1.EnvVar 
 				},
 			},
 		},
+	}
+
+	// Add session token environment variable if the key exists in the secret
+	if _, exists := secret.Data[s3SessionTokenName]; exists {
+		envs = append(envs, corev1.EnvVar{
+			Name: AWSSessionToken,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: secret.Name,
+					},
+					Key: s3SessionTokenName,
+				},
+			},
+		})
 	}
 
 	envs = append(envs, BuildS3EnvVars(secret.Annotations, &secret.Data, s3Config)...)

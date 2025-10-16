@@ -116,6 +116,123 @@ func TestS3Secret(t *testing.T) {
 			},
 		},
 
+		"S3SecretWithSessionToken": {
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "s3-secret",
+					Annotations: map[string]string{
+						InferenceServiceS3SecretEndpointAnnotation: "s3.aws.com",
+					},
+				},
+				Data: map[string][]byte{
+					AWSSessionTokenName: []byte("test-session-token"),
+				},
+			},
+			expected: []corev1.EnvVar{
+				{
+					Name: AWSAccessKeyId,
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "s3-secret",
+							},
+							Key: AWSAccessKeyIdName,
+						},
+					},
+				},
+				{
+					Name: AWSSecretAccessKey,
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "s3-secret",
+							},
+							Key: AWSSecretAccessKeyName,
+						},
+					},
+				},
+				{
+					Name: AWSSessionToken,
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "s3-secret",
+							},
+							Key: AWSSessionTokenName,
+						},
+					},
+				},
+				{
+					Name:  S3Endpoint,
+					Value: "s3.aws.com",
+				},
+				{
+					Name:  AWSEndpointUrl,
+					Value: "https://s3.aws.com",
+				},
+			},
+		},
+
+		"S3SecretWithCustomSessionTokenName": {
+			config: S3Config{
+				S3SessionTokenName: "custom-session-token",
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "s3-secret",
+					Annotations: map[string]string{
+						InferenceServiceS3SecretEndpointAnnotation: "s3.aws.com",
+					},
+				},
+				Data: map[string][]byte{
+					"custom-session-token": []byte("test-session-token"),
+				},
+			},
+			expected: []corev1.EnvVar{
+				{
+					Name: AWSAccessKeyId,
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "s3-secret",
+							},
+							Key: AWSAccessKeyIdName,
+						},
+					},
+				},
+				{
+					Name: AWSSecretAccessKey,
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "s3-secret",
+							},
+							Key: AWSSecretAccessKeyName,
+						},
+					},
+				},
+				{
+					Name: AWSSessionToken,
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "s3-secret",
+							},
+							Key: "custom-session-token",
+						},
+					},
+				},
+				{
+					Name:  S3Endpoint,
+					Value: "s3.aws.com",
+				},
+				{
+					Name:  AWSEndpointUrl,
+					Value: "https://s3.aws.com",
+				},
+			},
+		},
+
 		"S3SecretAnnotationHttpsOverrideEnvs": {
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
